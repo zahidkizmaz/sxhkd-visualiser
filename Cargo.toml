@@ -1,0 +1,7 @@
+[package]
+name = "sxhkd-cheat-sheet"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gtk = "0.15.5"
