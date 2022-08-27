@@ -16,10 +16,7 @@ struct HotkeyCommand {
 }
 
 fn main() {
-    let app = Application::builder()
-        .application_id("sxhkd-cheat-sheet.zahid.rocks")
-        .build();
-
+    let app = Application::new(Some("sxhkd-visualiser.zahid.rocks"), Default::default());
     app.connect_activate(|app| {
         if let Ok(config_file_reader) = read_sxhkd_config_file(None) {
             let cleaned_config_content = clean_sxhkd_config_file(config_file_reader);
@@ -27,7 +24,6 @@ fn main() {
             build_ui(app, parsed_config_content);
         }
     });
-
     app.run();
 }
 
