@@ -16,18 +16,20 @@ struct HotkeyCommand {
 }
 
 fn main() {
+    let mut hotkey_commands: Option<Vec<HotkeyCommand>> = None;
+    if let Ok(config_file_reader) = read_sxhkd_config_file(None) {
+        let cleaned_config_content = clean_sxhkd_config_file(config_file_reader);
+        hotkey_commands = Some(parse_sxhkd_config_file_content(cleaned_config_content));
+    }
+
     let app = Application::new(Some("sxhkd-visualiser.zahid.rocks"), Default::default());
-    app.connect_activate(|app| {
-        if let Ok(config_file_reader) = read_sxhkd_config_file(None) {
-            let cleaned_config_content = clean_sxhkd_config_file(config_file_reader);
-            let parsed_config_content = parse_sxhkd_config_file_content(cleaned_config_content);
-            build_ui(app, parsed_config_content);
-        }
+    app.connect_activate(move |app| {
+        build_ui(app, hotkey_commands.as_ref());
     });
     app.run();
 }
 
-fn build_ui(application: &gtk::Application, hotkey_data: Vec<HotkeyCommand>) {
+fn build_ui(application: &gtk::Application, hotkey_data: Option<&Vec<HotkeyCommand>>) {
     let window = gtk::ApplicationWindow::new(application);
     window.set_title("SXHKD Keybindings");
     window.set_border_width(10);
@@ -46,16 +48,23 @@ fn build_ui(application: &gtk::Application, hotkey_data: Vec<HotkeyCommand>) {
     sw.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
     vbox.add(&sw);
 
-    let model = Rc::new(create_model(hotkey_data));
-    let treeview = gtk::TreeView::with_model(&*model);
-    treeview.set_vexpand(true);
-
-    sw.add(&treeview);
-    add_columns(&treeview);
+    match hotkey_data {
+        Some(hotkey_data) => {
+            let model = Rc::new(create_model(hotkey_data));
+            let treeview = gtk::TreeView::with_model(&*model);
+            treeview.set_vexpand(true);
+            sw.add(&treeview);
+            add_columns(&treeview);
+        }
+        None => {
+            let error_label = gtk::Label::new(Some("Could not find sxhkdrc file!"));
+            sw.add(&error_label);
+        }
+    }
     window.show_all();
 }
 
-fn create_model(hotkey_data: Vec<HotkeyCommand>) -> gtk::ListStore {
+fn create_model(hotkey_data: &Vec<HotkeyCommand>) -> gtk::ListStore {
     let col_types: [glib::Type; 2] = [glib::Type::STRING, glib::Type::STRING];
     let store = gtk::ListStore::new(&col_types);
 
